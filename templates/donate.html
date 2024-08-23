@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Donate</h1>
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %} 
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }}" role="alert"> {{ message }} </div> 
+        {% endfor %} 
+    {% endif %} 
+{% endwith %}
+<form method="POST">
+    {{ form.hidden_tag() }}
+    <p>
+        {{ form.amount.label }}<br>
+        {{ form.amount() }}
+    </p>
+    <p>{{ form.submit() }}</p>
+</form>
+<script>
+    function showAlert() {
+        alert("Form submitted successfully!");
+        return true; // Return true to allow form submission
+    }
+</script>
+{% endblock %}
