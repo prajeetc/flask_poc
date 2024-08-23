@@ -4,9 +4,10 @@ from wtforms import StringField, PasswordField, SubmitField, DecimalField
 from wtforms.validators import DataRequired, Length, ValidationError
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import json
-
+from datetime import datetime
+import os
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key_here'
+app.config['SECRET_KEY'] = os.urandom(12)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -29,14 +30,17 @@ users_file = 'data/users.json'
 donations_file = 'data/donations.json'
 
 class User(UserMixin):
-    def __init__(self, username):
+    def __init__(self, username,isAdmin = False):
         self.id = username
+        self.is_admin = isAdmin
 
 @login_manager.user_loader
 def load_user(username):
     users = load_data(users_file)
     if username in users:
         return User(username)
+    if username in users['admin']:
+        return User(username,True)
     return None
 
 class LoginForm(FlaskForm):
@@ -72,6 +76,15 @@ def login():
             user = User(username)
             login_user(user)
             return redirect(url_for('index'))
+        elif username in users['admin'] and password == users['admin'][username]:
+            print("loggen in as admin")
+            user = User(username)
+            login_user(user)
+            return redirect(url_for('index'))
+        else:
+            flash(f'Incorrect username or password.')
+            return render_template('login.html', form=form)
+            
     return render_template('login.html', form=form)
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -87,6 +100,9 @@ def register():
             user = User(username)
             login_user(user)
             return redirect(url_for('index'))
+        else:
+            flash(f'Username already taken. Please use another username.','failure')
+            return render_template('register.html', form=form)
     return render_template('register.html', form=form)
 
 @app.route('/logout')
@@ -100,21 +116,50 @@ def logout():
 def donate():
     form = DonationForm()
     if form.validate_on_submit():
+        timestamp = datetime.now().strftime(f"%Y-%m-%d %H:%M:%S")
         amount = form.amount.data
         donations = load_data(donations_file)
         if current_user.is_authenticated:
             username = current_user.id
             if username not in donations:
                 donations[username] = []
-            donations[username].append(float(amount))
+            donations[username].append({
+                'amount':float(amount),
+                'timestamp': timestamp
+            })
             save_data(donations_file, donations)
-            form = DonationForm(
-                formdata=None
-                                )
+            form = DonationForm(formdata=None)
             flash(f'You have made a donation of ₹{amount:.2f}. Thank you.','success')
             return render_template('donate.html', form=form)
-        # session.pop('message', None)
     return render_template('donate.html', form=form)
+
+@app.route('/your-donations')
+@login_required
+def your_donations():
+    username = current_user.id
+    donations = load_data(donations_file)
+    user_donations = donations.get(username ,[])
+    return render_template('your_donations.html',donations=user_donations)
+
+@app.route('/view-all-users')
+@login_required
+def view_all_users():
+    username = current_user.id
+    users = load_data(users_file)
+    donations = load_data(donations_file)
+ 
+    if not current_user.is_admin and (username not in users or username != 'admin'):
+        logout_user()
+        return redirect(url_for('index'))
+ 
+    user_donations = {}
+    sum1 = 0
+    for user, donation_list in donations.items():
+        total_donation = sum(donation['amount'] for donation in donation_list)
+        sum1= sum1+total_donation
+        user_donations[user] = total_donation
+ 
+    return render_template('view_all_users.html', user_donations=user_donations,total_donation=sum1)
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+ 
+{% block content %}
+<h1>All Users and Their Total Donations</h1>
+ 
+<table>
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Total Donation</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user, total in user_donations.items() %}
+        <tr>
+            <td>{{ user + '(you)' if current_user.id == user else user}}</td>
+            <td>₹{{ total }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<p>Total Donation = ₹{{ total_donation }}</pp>
+{% endblock %}
+ 
