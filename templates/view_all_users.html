@@ -2,7 +2,31 @@
  
 {% block content %}
 <h1>All Users and Their Total Donations</h1>
- 
+<style>
+    .button {
+  border: none;
+  color: white;
+  padding: 8px 10px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 1px 1px;
+  transition-duration: 0.4s;
+  cursor: pointer;
+}
+
+.button1 {
+  background-color: rgb(176, 155, 155);
+  color: black;
+  border: 1px solid #000906;
+}
+
+.button1:hover {
+  background-color: #04AA6D;
+  color: white;
+}
+</style>
 <table>
     <thead>
         <tr>
@@ -14,11 +38,47 @@
         {% for user, total in user_donations.items() %}
         <tr>
             <td>{{ user + '(you)' if current_user.id == user else user}}</td>
-            <td>₹{{ total }}</td>
+            <td>₹{{ total[0] }}</td>
+            <!-- <td 
+                {% if total[1] %}
+                onclick="handleClick('{{user}}')"
+                {% endif%}
+            >{{ 'User is admin' if total[1] else 'Make user admin'}}</td> -->
+            <div>
+                {% if total[1] %}
+                <td>
+                    <center>
+                        {{"User is admin"}}
+                    </center>
+                </td>
+                {% else %}
+                <td>
+                    <buton class="button button1"
+                    onclick="handleClick('{{user}}')"
+                    >{{'Make user admin'}}</button>
+                </td>
+                {% endif%}
+            </div>
         </tr>
         {% endfor %}
     </tbody>
 </table>
 <p>Total Donation = ₹{{ total_donation }}</pp>
+<script>
+    function handleClick(user){
+        fetch('/make-user-admin',{
+            method : 'POST',
+            headers : {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({"user":user})
+        }).then(response => {
+            if (response.redirected) {
+                window.location.href = response.url;
+            }
+        }).catch(error => console.error('Error:', error));
+        console.log("post request sent")
+    }
+</script>
 {% endblock %}
  

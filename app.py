@@ -77,7 +77,7 @@ def login():
             login_user(user)
             return redirect(url_for('index'))
         elif username in users['admin'] and password == users['admin'][username]:
-            print("loggen in as admin")
+            print("logged in as admin")
             user = User(username)
             login_user(user)
             return redirect(url_for('index'))
@@ -139,7 +139,8 @@ def your_donations():
     username = current_user.id
     donations = load_data(donations_file)
     user_donations = donations.get(username ,[])
-    return render_template('your_donations.html',donations=user_donations)
+    total_donations = sum(donation['amount'] for donation in user_donations)
+    return render_template('your_donations.html',donations=user_donations,total=total_donations)
 
 @app.route('/view-all-users')
 @login_required
@@ -154,12 +155,63 @@ def view_all_users():
  
     user_donations = {}
     sum1 = 0
-    for user, donation_list in donations.items():
-        total_donation = sum(donation['amount'] for donation in donation_list)
-        sum1= sum1+total_donation
-        user_donations[user] = total_donation
+    for user in users:
+        if user in donations:
+            donation_list = donations[user]
+            total_donation = sum(donation['amount'] for donation in donation_list)
+            print(sum1,total_donation,user)
+            sum1= sum1+total_donation
+            # if user in users["admin"]:
+            #     user_donations[user] = [total_donation,True]
+            # else:
+            user_donations[user] = [total_donation,False]
+        elif user != "admin":
+            # if user in users["admin"]:
+            #     user_donations[user] = [0,True]
+            # else:
+            user_donations[user] = [0,False]
+    for user in users["admin"]:
+        if user in donations:
+            donation_list = donations[user]
+            total_donation = sum(donation['amount'] for donation in donation_list)
+            print(sum1,total_donation,user)
+            sum1= sum1+total_donation
+            # if user in users["admin"]:
+            user_donations[user] = [total_donation,True]
+            # else:
+            # user_donations[user] = [total_donation,False]
+        else :
+            # if user in users["admin"]:
+            #     user_donations[user] = [0,True]
+            # else:
+            user_donations[user] = [0,False]
+    
+
+    # for user, donation_list in donations.items():
+    #     total_donation = sum(donation['amount'] for donation in donation_list)
+    #     sum1= sum1+total_donation
+    #     if user in users["admin"]:
+    #         user_donations[user] = [total_donation,True]
+    #     else:
+    #         user_donations[user] = [total_donation,False]
  
     return render_template('view_all_users.html', user_donations=user_donations,total_donation=sum1)
+
+@app.route('/make-user-admin',methods=['POST'])
+@login_required
+def make_user_admin():
+    if request.method == 'POST' and request.json['user']:
+        user_name = request.json['user']
+        print(user_name)
+        users = load_data(users_file)
+        if user_name in users:
+            users["admin"][user_name] = users[user_name]
+            del users[user_name]
+            save_data(users_file,users)
+        else:
+            print(f"User {user_name} not found in users.")
+    return redirect(url_for('view_all_users'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)
